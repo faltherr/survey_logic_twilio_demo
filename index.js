@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser')
 const massive = require('massive')
 const controller = require('./controller');
-const urlencoded = require('body-parser').urlencoded
+// const urlencoded = require('body-parser').urlencoded
 require('dotenv').config()
 
 const {CONNECTION_STRING} = process.env
@@ -14,8 +14,8 @@ massive(CONNECTION_STRING).then(db =>{
     console.log('db is connected')
 })
 
-// app.use(bodyParser.json())
-app.use(urlencoded({ extended: true }));
+app.use(bodyParser.json())
+// app.use(urlencoded({ extended: true }));
 
 app.post('/sms', controller.emergency)
 
