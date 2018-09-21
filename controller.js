@@ -28,7 +28,7 @@ module.exports = {
                         setTimeout(() => console.log('Question 1: What is your name?'), 3000)
                     })
                 }
-                console.log(111111, response)
+                // console.log(111111, response)
                 // response.status(200).send()
             })
         } else {
@@ -49,16 +49,24 @@ module.exports = {
                             let objectArr = Object.values(surveyNumberCheck[0])
                             // console.log(objectArr)
                             let firstNullIndex = objectArr.indexOf(null)
-                            // console.log(firstNullIndex)
+                            console.log(firstNullIndex)
                         
                             //** Question to fill holds the key of the object at the first null value
                             //** We will add this value to the database
                             let questionToFill = Object.keys(surveyNumberCheck[0])[firstNullIndex]
                             
                             //** This should be a DB Query for adding values to the database
-                            // db.addValueByName([questionsToFill, Body, From]).then(addValueToDB=>{
-                            //     res.status(200).send(addValueToDB)
-                            // })
+                            let newObj = {}
+                            newObj[questionToFill] = Body;
+
+                            console.log('newObj', newObj)
+                            // console.log("phone", db.mama_survey.columns)
+                            console.log('From', From)
+                            
+                            db.mama_survey.update({phone: From}, newObj).then( function(error, updatedDatabase) {
+                                res.status(200).send(updatedDatabase)
+                            })
+                        
 
 
                             // ********** Determine what question to send ********** //
@@ -71,10 +79,10 @@ module.exports = {
                             //** We want to make sure that there is still a question to send
                             if(secondNullIndex !== -1 ){
                                 let questionToSend = Object.keys(surveyNumberCheck[0])[secondNullIndex]
-                                console.log('This is the reference to the survey question we want to send to the user:', questionToSend)
+                                // console.log('This is the reference to the survey question we want to send to the user:', questionToSend)
                                 surveyQs.forEach( element => {
                                     if(questionToSend in element){
-                                        console.log("This is the survey question we want to ask the user:", Object.values(element)[0])
+                                        // console.log("This is the survey question we want to ask the user:", Object.values(element)[0])
                                     }
                                 })
                                 }

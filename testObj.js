@@ -13,8 +13,8 @@ let patientObj = {
 }
 
 function pullNull (){
-    // console.log(Object.keys(patientObj))
-    // console.log(Object.values(patientObj))
+    console.log(Object.keys(patientObj))
+    console.log(Object.values(patientObj))
 
     if (Object.values(patientObj).indexOf(null) === -1){
         console.log('Survey is complete. Message us if there is an emergency.')
@@ -23,13 +23,14 @@ function pullNull (){
 
         // The first null index should be identified as the value we want to insert into the table
         let objectArr = Object.values(patientObj)
-        // console.log(objectArr)
+        console.log(objectArr)
         let firstNullIndex = objectArr.indexOf(null)
-        // console.log(firstNullIndex)
+        console.log(firstNullIndex)
     
         // Question to fill holds the key of the object at the first null value
         // We will add this value to the database
         let questionToFill = Object.keys(patientObj)[firstNullIndex]
+        console.log(questionToFill)
 
         // ********** Determine what question to send ********** //
 
@@ -43,11 +44,11 @@ function pullNull (){
             console.log(questionToSend)
         }
     
-        console.log(questionToFill)
+        // console.log(questionToFill)
 
     }
 
 
 }
-
 console.log(pullNull(patientObj))
+
