@@ -20,19 +20,28 @@ module.exports = {
         // This is the emergency response functionality
         if (Body.toLowerCase().match(/^.*(emergency).*$/)) {
             db.alertStatus(From).then(emergencyResponse => {
-                return respond('We have received your request for assistance. We contacted your health worker to coordinate a response.')
-                res.status(200).send(emergencyResponse)
+                //******** Should I add this into the massaging response? */
+                //******** Should the respond function be different for an emergency? So that we message patient AND HCW?*/
+                
+                respond(`Help is on the way, ${emergencyResponse[0].name}. Your health worker is coordianting a response for your address, ${emergencyResponse[0].location}`)
             })
 
         // This is the registration functionality
         } else if (Body.toLowerCase().match(/^.*(register|start).*$/)) {
             db.checkPhoneNumber(From).then(checkPhoneNumber => {
                 if (checkPhoneNumber.length) {
-                    return respond('You\'re already registered')
+                    // If the user resends register, lookup their survey and resend the question.
+                    let objectArr = Object.values(checkPhoneNumber[0])
+                    let firstNullIndex = objectArr.indexOf(null)
+                    let questionToFill = Object.keys(checkPhoneNumber[0])[firstNullIndex]
+                    surveyQs.forEach(element => {
+                        if (questionToFill in element) {
+                            return respond(`You\'re already registered. Please answer this question: ${Object.values(element)[0]}`)
+                        }
+                    })
                 } else {
                     db.addPhone(From).then(addedNumbers => {
                         return respond(`Your number has been added. Please complete our survey. ${surveyQs[0].name}`)
-                        res.status(200).send(addedNumbers)
                     })
                 }
             })
@@ -40,15 +49,12 @@ module.exports = {
         } else {
             db.checkPhoneNumber(From).then(surveyNumberCheck => {
                 if (surveyNumberCheck.length === 0) {
-                    return respond('Did you mean to register for HealthGrid Field Service? Respond with Register.')
+                    return respond('Did you mean to register for HealthGrids Field Service? Respond with "Register".')
                 } else if (surveyNumberCheck[0].completed === true) {
-                    return respond('Survey has already been completed.')
+                    return respond('You already completed the survey. Message us if there is an emergency with "emergency".')
                 } else {
-                    if (Object.values(surveyNumberCheck[0]).indexOf(null) === -1) {
-                        return respond('Survey is complete. Message us if there is an emergency.')
-                    } else {
+                    // Here we use the imported survey logic function to update DB and ask the correct question
                         surveyLogic(surveyNumberCheck, Body, From, db, respond)
-                    }
                 }
             })
         }

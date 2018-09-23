@@ -8,5 +8,6 @@
 -- hiv varchar(7),
 -- parity integer,
 -- dueDate date,
+-- alert BOOLEAN NOT NULL DEFAULT FALSE
 -- completed BOOLEAN NOT NULL DEFAULT FALSE
 -- )

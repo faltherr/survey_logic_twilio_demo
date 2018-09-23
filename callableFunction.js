@@ -1,33 +1,40 @@
 const surveyQs = require('./survey_questions')
-// const respond = require('./responseMessage')
 
 module.exports = function surveyLogic(surveyNumberCheck, Body, From, db, respond) {
 
     // ********** Determine what cell the message body should fill ********** //
 
-    //** The first null index should be identified as the value we want to insert into the table
+    // objectArr holds the values of the current survey respondent
     let objectArr = Object.values(surveyNumberCheck[0])
-    let firstNullIndex = objectArr.indexOf(null)
 
+    //** The first null index should be identified as the value we want to insert into the table
+    let firstNullIndex = objectArr.indexOf(null)
+    
     //** Question to fill holds the key of the object at the first null value
     //** We will add this value to the database
     let questionToFill = Object.keys(surveyNumberCheck[0])[firstNullIndex]
 
-    //
+    // Here is the logic for checking to make sure the response type is accurate and will be added to our database correctly
     if (questionToFill === 'famplan' || questionToFill === 'illness' || questionToFill === 'hiv') {
-        // console.log('Yes No question type')
-        if (Body.match(/^.?(yes).?$/)) {
-            console.log('Add yes')
+        // For each question we want to make sure that the text returned is accurate
+        // This regex matches the string 'yes' with a 1 character padding on either side in case the user enters "yes " or "1yes"
+        if (Body.toLowerCase().match(/^.?(yes).?$/)) {
             let newObj = {}
             newObj[questionToFill] = 'yes';
+            // The line below is a method from Massive that allows us to update a row
+            // The first object passed in is like the where clause. Here we are saying where phone number is equal to the number FROM the SMS
+            // The second object is the object specifying which column we want to update in the database (key) with what value (value)
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
-        } else if (Body.match(/^.?(no).?$/)) {
+            // The line below updates the first null index after a value has been returned so that the survey logic can be based off of the first null index following the database update
+            objectArr[firstNullIndex] = 'yes'
+        } else if (Body.toLowerCase().match(/^.?(no).?$/)) {
             // console.log('Add no')
             let newObj = {}
             newObj[questionToFill] = 'no';
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
+            objectArr[firstNullIndex] = 'no'
         } else {
-            // This is the template for all invalid responses
+            // This is the template for all invalid responses apply this to each case where the response is invalid to resend the question.
             // console.log('Please answer question again')
             surveyQs.forEach(element => {
                 if (questionToFill in element) {
@@ -35,36 +42,35 @@ module.exports = function surveyLogic(surveyNumberCheck, Body, From, db, respond
                 }
             })
         }
-
     } else if (questionToFill === 'age') {
         // console.log('Body', typeof +Body)
         if (Number.isInteger(+Body) && Body >= 10 && Body <= 70) {
             let newObj = {}
             newObj[questionToFill] = Body;
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
+            objectArr[firstNullIndex] = Body
         } else {
             surveyQs.forEach(element => {
                 if (questionToFill in element) {
                     return respond(`Please re-enter a valid answer. ${Object.values(element)[0]}`)
                 }
             })
-            // console.log('Please re-enter a valid number.')
         }
     } else if (questionToFill === 'parity') {
         if (Number.isInteger(+Body) && Body >= 0 && Body <= 20) {
             let newObj = {}
             newObj[questionToFill] = Body;
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
+            objectArr[firstNullIndex] = Body
         } else {
             surveyQs.forEach(element => {
                 if (questionToFill in element) {
                     return respond(`Please re-enter a valid answer. ${Object.values(element)[0]}`)
                 }
             })
-            // console.log('Parity question should be between 0 and 20')
         }
     } else if (questionToFill === 'duedate') {
-        let dateMatcher = /^(\d{4})(\/|\-|\.)(0[1-9]|1[0-2]|[0-12])(\/|\-|\.)([0-31]|0[1-9]|1[0-9]|2[0-9]|3[0-1])$/
+        let dateMatcher = /^([2][0][1-2][0-9])(\/|\-|\.)(0[1-9]|1[0-2]|[0-12])(\/|\-|\.)([0-31]|0[1-9]|1[0-9]|2[0-9]|3[0-1])$/
         if (Body.match(dateMatcher)) {
             // console.log('Your date is correct')
             let year = Body.match(dateMatcher)[1]
@@ -75,6 +81,7 @@ module.exports = function surveyLogic(surveyNumberCheck, Body, From, db, respond
             let newObj = {}
             newObj[questionToFill] = fullDueDate;
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
+            objectArr[firstNullIndex] = fullDueDate
         } else {
             // console.log('your date is terrible')
             surveyQs.forEach(element => {
@@ -86,20 +93,21 @@ module.exports = function surveyLogic(surveyNumberCheck, Body, From, db, respond
 
 
     } else if (questionToFill === 'location') {
-        let locationMatcher = /^([a-z]+)(\/|\.|\-)([a-z]+)(\/|\.|\-)([a-z]+)$/
+        let locationMatcher = new RegExp(/^([a-z]+)(\/|\.|\-)([a-z]+)(\/|\.|\-)([a-z]+)$/, 'i')
         if (Body.match(locationMatcher)) {
+            console.log(11111111111111, Body)
             let word1 = Body.match(locationMatcher)[1]
             let word2 = Body.match(locationMatcher)[3]
             let word3 = Body.match(locationMatcher)[5]
 
-            let fullAddress = `${word1}.${word2}.${word3}`
+            let fullAddress = `${word1}.${word2}.${word3}`.toLowerCase()
 
-            // Add the 3words api get request request here! Check for latitude/longitude bouds for Sierra Leone
+            // Add the 3words api get request request here! Check for latitude/longitude bounds for Sierra Leone
 
             let newObj = {}
             newObj[questionToFill] = fullAddress;
             db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
-
+            objectArr[firstNullIndex] = fullAddress
         } else {
             surveyQs.forEach(element => {
                 if (questionToFill in element) {
@@ -108,40 +116,46 @@ module.exports = function surveyLogic(surveyNumberCheck, Body, From, db, respond
             })
         }
     } else {
+        //** This should be a DB Query for adding values to the database
         let newObj = {}
         newObj[questionToFill] = Body;
         db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) { })
+        objectArr[firstNullIndex] = Body
     }
 
-
-    //** This should be a DB Query for adding values to the database
-    // let newObj = {}
-    // newObj[questionToFill] = Body;
-
-    // db.mama_survey.update({ phone: From }, newObj).then(function (error, updatedDatabase) {})
 
     // // ********** Determine what question to send ********** //
 
     //** questionToSend holds the text associated with the key of the second null value
-    //** We get the second null index 
-
-    let secondNullIndex = objectArr.indexOf(null, objectArr.indexOf(null) + 1);
-    // console.log(secondNullIndex)
+    //** We get the second null index
 
     //** We want to make sure that there is still a question to send
-    if (secondNullIndex !== -1) {
-        console.log(secondNullIndex)
-        let questionToSend = Object.keys(surveyNumberCheck[0])[secondNullIndex]
-        // console.log('This is the reference to the survey question we want to send to the user:', questionToSend)
-        surveyQs.forEach(element => {
-            if (questionToSend in element) {
-                return respond(Object.values(element)[0])
-            }
-        })
-    } else {
-        console.log(secondNullIndex)
-        db.mama_survey.update({ phone: From }, {completed:true})
-        respond('Survey has been completed. Message us if there is an emergency with "emergency".')
-    }
 
+    // This code will try to find the number of null values then decide how to process the logic for setting a second null value
+
+
+    // console.log('Second obj Arr!!!!!', objectArr)
+
+    function sendQuestion() {
+        // null count identifies any unfilled cells in the survey
+        let nullCount = objectArr.filter(function (value) {return value === null }).length
+        // This is labeled "Next Null" because the first null value has been inserted into the database and the objectArr is updated
+        // Basically the next null is the first null after the object arr from earlier was updated on a successful question entry
+        let nextNullIndex = objectArr.indexOf(null)
+
+        // When null count is equal to 0 the survey is completed
+        if (nullCount === 0){
+            db.mama_survey.update({ phone: From }, {completed:true})
+            respond('Survey has been completed. Message us if there is an emergency with "emergency".')
+        } else {
+            let questionToSend = Object.keys(surveyNumberCheck[0])[nextNullIndex]
+            surveyQs.forEach(element => {
+                if (questionToSend in element) {
+                    return respond(Object.values(element)[0])
+                }
+            })
+        }
+    }
+    // Here we invoke the function that decides whether to send the next question of mark the survey as completed.
+    sendQuestion()
 }
